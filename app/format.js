@@ -24,4 +24,11 @@ function formatRate(bytesPerSecond) {
   return { text: value.toFixed(decimals), unit };
 }
 
-module.exports = { formatRate };
+function formatBytes(bytes) {
+  const n = Math.max(0, bytes || 0);
+  if (n >= 1e9) return { text: (n / 1e9).toFixed(2), unit: 'GB' };
+  if (n >= 1e6) return { text: (n / 1e6).toFixed(1), unit: 'MB' };
+  return { text: String(Math.round(n / 1e3)), unit: 'KB' };
+}
+
+module.exports = { formatRate, formatBytes };

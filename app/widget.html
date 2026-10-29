@@ -13,6 +13,7 @@
         --arrow: rgba(255, 255, 255, 0.72);
         --down: #7cc4ff;
         --up: #7fd6a4;
+        --fast: #7cc4ff;
       }
 
       @media (prefers-color-scheme: light) {
@@ -22,6 +23,7 @@
           --arrow: rgba(10, 10, 14, 0.6);
           --down: #1f6feb;
           --up: #148f5b;
+          --fast: #1f6feb;
         }
       }
 
@@ -38,7 +40,7 @@
         background: transparent;
         overflow: hidden;
         -webkit-user-select: none;
-        cursor: default;
+        cursor: pointer;
       }
 
       body {
@@ -46,7 +48,6 @@
         align-items: center;
         justify-content: flex-end;
         padding-right: 4px;
-        cursor: pointer;
       }
 
       .readout {
@@ -66,16 +67,21 @@
         opacity: 0.55;
       }
 
+      .readout.slow {
+        opacity: 0.62;
+      }
+
+      .readout.fast {
+        color: var(--fast);
+      }
+
       .readout:hover {
         filter: brightness(1.25);
       }
 
-      .readout:active {
-        filter: brightness(1.4);
-      }
-
       .readout[hidden],
-      .paused[hidden] {
+      .paused[hidden],
+      .unit[hidden] {
         display: none;
       }
 
@@ -118,10 +124,10 @@
   </head>
   <body>
     <div class="readout" id="readout">
-      <span class="arrow down">↓</span>
+      <span class="arrow down" id="arrowDown">↓</span>
       <span class="num" id="down">0.0</span>
       <span class="unit" id="downUnit">Kbps</span>
-      <span class="arrow up">↑</span>
+      <span class="arrow up" id="arrowUp">↑</span>
       <span class="num" id="up">0.0</span>
       <span class="unit" id="upUnit">Kbps</span>
     </div>
@@ -134,18 +140,62 @@
       const downUnitEl = document.getElementById('downUnit');
       const upEl = document.getElementById('up');
       const upUnitEl = document.getElementById('upUnit');
+      const arrowDown = document.getElementById('arrowDown');
+      const arrowUp = document.getElementById('arrowUp');
 
       let paused = false;
+      let compact = false;
 
-      window.api.onSample(({ down, up }) => {
-        if (paused) return;
-        downEl.textContent = down.text;
-        downUnitEl.textContent = down.unit;
-        upEl.textContent = up.text;
-        upUnitEl.textContent = up.unit;
+      function applyCompact() {
+        downUnitEl.hidden = compact;
+        upUnitEl.hidden = compact;
+      }
 
-        const idle = down.text === '0.0' && up.text === '0.0';
+      function renderSpeed(payload) {
+        arrowDown.hidden = false;
+        arrowUp.hidden = false;
+
+        downEl.textContent = payload.down.text;
+        downUnitEl.textContent = payload.down.unit;
+        upEl.textContent = payload.up.text;
+        upUnitEl.textContent = payload.up.unit;
+        applyCompact();
+
+        const idle = payload.down.text === '0.0' && payload.up.text === '0.0';
         readout.classList.toggle('idle', idle);
+        readout.classList.remove('slow', 'fast');
+
+        if (payload.thresholds) {
+          if (payload.mbps >= 25) readout.classList.add('fast');
+          else if (payload.mbps < 1) readout.classList.add('slow');
+        }
+      }
+
+      function renderTotal(payload) {
+        arrowDown.hidden = true;
+        arrowUp.hidden = true;
+
+        downEl.textContent = payload.text;
+        downUnitEl.textContent = payload.unit;
+        downUnitEl.hidden = false;
+        upEl.textContent = '';
+        upUnitEl.textContent = '';
+        upUnitEl.hidden = true;
+
+        readout.classList.remove('idle', 'slow', 'fast');
+      }
+
+      window.api.onWidget((payload) => {
+        if (paused) return;
+        compact = Boolean(payload.compact);
+
+        if (payload.kind === 'total') renderTotal(payload);
+        else renderSpeed(payload);
+      });
+
+      window.api.onSettings((settings) => {
+        compact = Boolean(settings.compact);
+        applyCompact();
       });
 
       window.api.onPaused((value) => {
@@ -156,6 +206,11 @@
 
       document.body.addEventListener('click', () => {
         window.api.openDashboard();
+      });
+
+      document.body.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+        window.api.widgetContext();
       });
 
       document.body.addEventListener('mouseenter', () => {
