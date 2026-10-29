@@ -22,7 +22,13 @@ No account. No sync. No telemetry. The app talks to Windows, and to nothing else
 - Four ranges: **Last 7 days**, **This week**, **Last 30 days**, or a specific **month** from a picker
 - Daily usage chart with a hover tooltip showing date, total, and the down/up split
 - **Apps in range** — ranked by bytes, with an explicit `unattributed` row rather than hiding the remainder
-- **Busiest day**, **average per day**, and **peak hour today**
+- **App drill-down** — click any app for its own daily chart
+- **Hourly pattern** — a weekday × hour heatmap, so "I burn data every evening at nine" is visible at a glance
+- **Forecast** — "at this rate: 621 GB by 31 Oct"
+- **Monthly cap** — optional progress bar, no alerts
+- **Search, rename and hide apps** — double-click to alias, `×` to hide
+- **Connection dot** — green while online, red when the connection drops
+- **Busiest day**, **average per day**, and **peak hour** in a single strip
 
 **Hover summary**
 - Hover the readout for today's total, the down/up split, and the top three apps
@@ -33,9 +39,12 @@ No account. No sync. No telemetry. The app talks to Windows, and to nothing else
 - The choice persists and applies to the dashboard, the widget and the popover together
 
 **Controls**
-- Tray icon: open dashboard, pause collection, theme, quit
+- Tray icon: open dashboard, readout mode, theme, pause, quit
+- Right-click the readout for the same readout options
+- Readout modes: **live speed** or **today's total**, plus **compact** and **colour by speed**
+- `Ctrl+Alt+D` opens the dashboard from anywhere
 - Starts at login
-- Click-through-free, never steals focus, never shows a taskbar button
+- Never steals focus, never shows a taskbar button
 
 | Dark | Light |
 |---|---|
@@ -211,8 +220,10 @@ Debug flags, for development only:
 | Variable | Effect |
 |---|---|
 | `WIDGET_PREVIEW=1` | Pins the widget at a fixed screen position instead of the taskbar |
-| `DASH_SNAPSHOT=<path>` | Captures the dashboard to a PNG four seconds after it opens |
+| `DASH_SNAPSHOT=<path>` | Captures the dashboard to a PNG after it opens |
+| `DASH_SNAPSHOT_DELAY=<ms>` | Changes that capture delay (default 4000) |
 | `DASH_TEST_TOGGLE=1` | Clicks the theme toggle before that capture, to test the real path |
+| `DASH_TEST_DRILL=1` | Opens the first app's drill-down before that capture |
 
 ---
 
