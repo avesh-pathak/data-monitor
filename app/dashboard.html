@@ -23,7 +23,6 @@
         --accent-2: #7cc4ff;
         --up: #7fd6a4;
         --peak: #f2b35c;
-        --violet: #a78bfa;
         --bar-1: #3f6ed0;
         --bar-2: #2b4a8c;
         --bar-empty: #1e1e25;
@@ -32,6 +31,7 @@
         --tooltip-line: rgba(255, 255, 255, 0.1);
         --seg-active: #2a2a34;
         --shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
+        --overlay: rgba(5, 5, 8, 0.72);
       }
 
       @media (prefers-color-scheme: light) {
@@ -50,7 +50,6 @@
           --accent-2: #3f8dff;
           --up: #148f5b;
           --peak: #a86400;
-          --violet: #6d4aff;
           --bar-1: #4b7ae0;
           --bar-2: #9dbbf5;
           --bar-empty: #e6e8ee;
@@ -59,6 +58,7 @@
           --tooltip-line: rgba(15, 15, 25, 0.12);
           --seg-active: #ffffff;
           --shadow: 0 18px 44px rgba(20, 30, 60, 0.14);
+          --overlay: rgba(240, 242, 248, 0.78);
         }
       }
 
@@ -86,12 +86,17 @@
         color: var(--text);
         font-family: 'Segoe UI Variable Text', 'Segoe UI', sans-serif;
         font-size: 14px;
-        padding: 22px 26px 16px;
+        padding: 18px 22px 12px;
         display: grid;
-        grid-template-rows: auto auto minmax(0, 1fr) auto auto;
-        gap: 13px;
+        grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+        gap: 10px;
+        height: 100vh;
         overflow: hidden;
         -webkit-user-select: none;
+      }
+
+      body > * {
+        min-height: 0;
       }
 
       header {
@@ -112,17 +117,34 @@
       .brand h1 {
         font-size: 15px;
         font-weight: 600;
-        letter-spacing: 0.1px;
         white-space: nowrap;
       }
 
       .meta {
+        display: flex;
+        align-items: center;
+        gap: 7px;
         font-size: 12px;
         color: var(--muted);
         font-variant-numeric: tabular-nums;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+
+      .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #4fbf8b;
+        box-shadow: 0 0 0 3px rgba(79, 191, 139, 0.16);
+        flex: 0 0 auto;
+        transition: background 200ms ease, box-shadow 200ms ease;
+      }
+
+      .dot.off {
+        background: #ef5b5b;
+        box-shadow: 0 0 0 3px rgba(239, 91, 91, 0.16);
       }
 
       .controls {
@@ -166,32 +188,6 @@
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
       }
 
-      .segmented button:focus-visible {
-        outline: 2px solid var(--accent);
-        outline-offset: 1px;
-      }
-
-      select {
-        appearance: none;
-        background: var(--card-2);
-        border: 1px solid var(--line);
-        color: var(--text);
-        font: inherit;
-        font-size: 12px;
-        padding: 7px 30px 7px 12px;
-        border-radius: 10px;
-        cursor: pointer;
-        background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
-          linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-        background-position: calc(100% - 15px) 14px, calc(100% - 10px) 14px;
-        background-size: 5px 5px, 5px 5px;
-        background-repeat: no-repeat;
-      }
-
-      select[hidden] {
-        display: none;
-      }
-
       .theme-toggle {
         width: 32px;
         height: 31px;
@@ -202,16 +198,10 @@
         border-radius: 10px;
         color: var(--muted);
         cursor: pointer;
-        transition: color 120ms ease, background 120ms ease;
       }
 
       .theme-toggle:hover {
         color: var(--text);
-      }
-
-      .theme-toggle:focus-visible {
-        outline: 2px solid var(--accent);
-        outline-offset: 1px;
       }
 
       .theme-toggle svg {
@@ -231,11 +221,27 @@
         display: none;
       }
 
+      select {
+        appearance: none;
+        background: var(--card-2);
+        border: 1px solid var(--line);
+        color: var(--text);
+        font: inherit;
+        font-size: 12px;
+        padding: 7px 30px 7px 12px;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+
+      select[hidden] {
+        display: none;
+      }
+
       .card {
         background: var(--card);
         border: 1px solid var(--line);
         border-radius: 18px;
-        padding: 18px 20px;
+        padding: 14px 16px;
         min-width: 0;
         min-height: 0;
       }
@@ -256,26 +262,82 @@
 
       .big {
         font-family: 'Segoe UI Variable Display', 'Segoe UI', sans-serif;
-        font-size: clamp(30px, 4.2vw, 46px);
+        font-size: clamp(26px, 3.4vw, 38px);
         font-weight: 650;
-        letter-spacing: -1.6px;
+        letter-spacing: -1.3px;
         line-height: 1;
         font-variant-numeric: tabular-nums;
       }
 
       .split {
-        margin-top: 12px;
-        font-size: 13px;
+        margin-top: 8px;
+        font-size: 12px;
         color: var(--muted);
         font-variant-numeric: tabular-nums;
         display: flex;
-        gap: 18px;
+        gap: 16px;
         flex-wrap: wrap;
       }
 
       .split b {
         color: var(--text);
         font-weight: 600;
+      }
+
+      .forecast {
+        margin-top: 6px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .cap {
+        margin-top: 8px;
+      }
+
+      .cap-bar {
+        height: 5px;
+        border-radius: 3px;
+        background: var(--track);
+        overflow: hidden;
+      }
+
+      .cap-bar span {
+        display: block;
+        height: 100%;
+        border-radius: 3px;
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      }
+
+      .cap-text {
+        margin-top: 6px;
+        font-size: 11px;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .cap-text button {
+        appearance: none;
+        border: 0;
+        background: none;
+        color: var(--accent);
+        font: inherit;
+        font-size: 11px;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      .cap-text input {
+        width: 64px;
+        background: var(--card-2);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        color: var(--text);
+        font: inherit;
+        font-size: 11px;
+        padding: 2px 6px;
       }
 
       .live-wrap {
@@ -294,7 +356,6 @@
         display: flex;
         flex-direction: column;
         gap: 4px;
-        min-width: 0;
       }
 
       .live .value {
@@ -326,16 +387,15 @@
         min-height: 0;
       }
 
-      .grid.three {
-        grid-template-columns: repeat(3, 1fr);
-      }
-
-      .chart-card,
-      .apps-card {
+      .grid > .card {
         display: flex;
         flex-direction: column;
         min-height: 0;
         overflow: hidden;
+      }
+
+      .grid.three {
+        grid-template-columns: repeat(3, 1fr);
       }
 
       .card-title {
@@ -371,7 +431,6 @@
         align-items: flex-end;
         gap: 4px;
         height: 100%;
-        min-height: 96px;
       }
 
       .bar {
@@ -443,20 +502,68 @@
         font-variant-numeric: tabular-nums;
       }
 
+      .apps-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .apps-head input {
+        flex: 1;
+        min-width: 0;
+        appearance: none;
+        background: var(--card-2);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--text);
+        font: inherit;
+        font-size: 12px;
+        padding: 6px 9px;
+      }
+
+      .apps-head input::placeholder {
+        color: var(--dim);
+      }
+
+      .apps-head button {
+        appearance: none;
+        background: transparent;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--muted);
+        font: inherit;
+        font-size: 11px;
+        padding: 5px 8px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
       .apps {
         display: flex;
         flex-direction: column;
-        gap: 11px;
-        overflow: hidden;
+        gap: 8px;
         flex: 1;
         min-height: 0;
+        overflow-y: auto;
+      }
+
+      .apps::-webkit-scrollbar {
+        width: 0;
       }
 
       .app {
         display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 5px 12px;
+        grid-template-columns: 1fr auto auto;
+        align-items: center;
+        gap: 4px 10px;
         font-size: 13px;
+        cursor: pointer;
+        padding: 2px 0;
+      }
+
+      .app:hover .app-name {
+        color: var(--accent-2);
       }
 
       .app-name {
@@ -465,9 +572,40 @@
         white-space: nowrap;
       }
 
+      .app-name input {
+        width: 100%;
+        background: var(--card-2);
+        border: 1px solid var(--accent);
+        border-radius: 5px;
+        color: var(--text);
+        font: inherit;
+        font-size: 13px;
+        padding: 1px 4px;
+      }
+
       .app-value {
         color: var(--muted);
         font-variant-numeric: tabular-nums;
+      }
+
+      .app-hide {
+        appearance: none;
+        border: 0;
+        background: none;
+        color: var(--dim);
+        font-size: 14px;
+        line-height: 1;
+        cursor: pointer;
+        opacity: 0;
+        padding: 0 2px;
+      }
+
+      .app:hover .app-hide {
+        opacity: 1;
+      }
+
+      .app-hide:hover {
+        color: var(--text);
       }
 
       .app-bar {
@@ -485,12 +623,68 @@
         background: linear-gradient(90deg, var(--accent), var(--accent-2));
       }
 
-      .stat {
-        font-family: 'Segoe UI Variable Display', 'Segoe UI', sans-serif;
-        font-size: clamp(20px, 2.6vw, 27px);
+      .heatmap-card {
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+
+      .heatmap {
+        display: grid;
+        grid-template-columns: 34px repeat(24, minmax(0, 1fr));
+        gap: 2px;
+        align-items: center;
+      }
+
+      .heat-day {
+        font-size: 10px;
+        color: var(--dim);
+      }
+
+      .heat-hour {
+        font-size: 9px;
+        color: var(--dim);
+        text-align: left;
+      }
+
+      .cell {
+        height: 11px;
+        border-radius: 3px;
+        background: var(--track);
+      }
+
+      .cell:hover {
+        outline: 1px solid var(--accent);
+      }
+
+      .stat-strip {
+        display: flex;
+        align-items: baseline;
+        gap: 26px;
+        padding: 2px 4px;
+        flex-wrap: wrap;
+      }
+
+      .stat-item {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .stat-item b {
+        font-size: 15px;
         font-weight: 650;
-        letter-spacing: -0.7px;
+        letter-spacing: -0.2px;
+        color: var(--text);
         font-variant-numeric: tabular-nums;
+      }
+
+      .stat-item em {
+        font-style: normal;
+        font-size: 11px;
+        color: var(--dim);
       }
 
       #busiest {
@@ -499,6 +693,14 @@
 
       #peak {
         color: var(--up);
+      }
+
+      .stat {
+        font-family: 'Segoe UI Variable Display', 'Segoe UI', sans-serif;
+        font-size: clamp(18px, 2.2vw, 23px);
+        font-weight: 650;
+        letter-spacing: -0.5px;
+        font-variant-numeric: tabular-nums;
       }
 
       .sub {
@@ -511,6 +713,7 @@
         font-size: 11px;
         color: var(--dim);
         line-height: 1.45;
+        padding-bottom: 4px;
       }
 
       .empty-state {
@@ -519,20 +722,65 @@
         line-height: 1.5;
       }
 
-      @media (max-width: 900px) {
-        body {
-          grid-template-rows: auto auto auto auto auto;
-          overflow-y: auto;
-        }
+      .modal {
+        position: fixed;
+        inset: 0;
+        background: var(--overlay);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        padding: 40px;
+      }
 
+      .modal[hidden] {
+        display: none;
+      }
+
+      .modal-card {
+        width: min(720px, 100%);
+        max-height: 80vh;
+        overflow-y: auto;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 20px 22px;
+        box-shadow: var(--shadow);
+      }
+
+      .modal-card .chart-wrap {
+        height: 220px;
+        flex: 0 0 auto;
+      }
+
+      .modal-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .modal-head h3 {
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      .modal-head button {
+        appearance: none;
+        border: 0;
+        background: none;
+        color: var(--muted);
+        font-size: 20px;
+        line-height: 1;
+        cursor: pointer;
+      }
+
+      @media (max-width: 900px) {
         .hero,
         .grid,
         .grid.three {
           grid-template-columns: 1fr;
-        }
-
-        .chart {
-          height: 132px;
         }
       }
 
@@ -555,7 +803,10 @@
     <header>
       <div class="brand">
         <h1>Data Monitor</h1>
-        <div class="meta" id="meta">loading…</div>
+        <div class="meta">
+          <span class="dot" id="connDot" title="Connected"></span>
+          <span id="meta">loading…</span>
+        </div>
       </div>
       <div class="controls">
         <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch theme">
@@ -586,6 +837,15 @@
           <span><b id="rangeUp">—</b> up</span>
           <span><b id="rangeDays">—</b> days</span>
         </div>
+        <div class="forecast" id="forecast"></div>
+        <div class="cap" id="cap" hidden>
+          <div class="cap-bar" id="capBar"><span id="capFill" style="width: 0%"></span></div>
+          <div class="cap-text">
+            <span id="capText"></span>
+            <input id="capInput" type="number" min="0" step="10" placeholder="GB" hidden />
+            <button id="capEdit" type="button">Set cap</button>
+          </div>
+        </div>
       </div>
       <div class="card live-wrap">
         <div class="label">Live now</div>
@@ -603,7 +863,7 @@
     </section>
 
     <section class="grid">
-      <div class="card chart-card">
+      <div class="card">
         <div class="card-title">
           <h2>Daily usage</h2>
           <span id="chartPeak"></span>
@@ -614,10 +874,14 @@
         </div>
         <div class="axis" id="axis"></div>
       </div>
-      <div class="card apps-card">
+      <div class="card">
         <div class="card-title">
           <h2 id="appsTitle">Apps in range</h2>
           <span id="appsTotal"></span>
+        </div>
+        <div class="apps-head">
+          <input id="appSearch" type="search" placeholder="Filter apps…" />
+          <button id="showHidden" type="button">Hidden 0</button>
         </div>
         <div class="apps" id="apps">
           <div class="empty-state">Loading…</div>
@@ -625,21 +889,30 @@
       </div>
     </section>
 
-    <section class="grid three">
-      <div class="card">
-        <div class="card-title"><h2>Busiest day</h2></div>
-        <div class="stat" id="busiest">—</div>
-        <div class="sub" id="busiestSub"></div>
+    <section class="card heatmap-card">
+      <div class="card-title">
+        <h2>Hourly pattern</h2>
+        <span id="heatPeak"></span>
       </div>
-      <div class="card">
-        <div class="card-title"><h2>Average per day</h2></div>
-        <div class="stat" id="average">—</div>
-        <div class="sub" id="averageSub"></div>
+      <div class="heatmap" id="heatmap"></div>
+      <div class="tooltip" id="heatTip"></div>
+    </section>
+
+    <section class="stat-strip">
+      <div class="stat-item">
+        <span>Busiest day</span>
+        <b id="busiest">—</b>
+        <em id="busiestSub"></em>
       </div>
-      <div class="card">
-        <div class="card-title"><h2>Peak hour today</h2></div>
-        <div class="stat" id="peak">—</div>
-        <div class="sub" id="peakSub"></div>
+      <div class="stat-item">
+        <span>Average per day</span>
+        <b id="average">—</b>
+        <em id="averageSub"></em>
+      </div>
+      <div class="stat-item">
+        <span>Peak hour</span>
+        <b id="peak">—</b>
+        <em id="peakSub"></em>
       </div>
     </section>
 
@@ -647,12 +920,27 @@
       Source: Windows usage API, the same store as Settings → Data usage. Today is partial and still growing.
     </footer>
 
+    <div class="modal" id="modal" hidden>
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3 id="modalTitle">App</h3>
+          <button id="modalClose" type="button" aria-label="Close">×</button>
+        </div>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+
     <script>
       const el = (id) => document.getElementById(id);
 
       let data = null;
       let range = '30d';
       let month = null;
+      let settings = { aliases: {}, ignored: [], capGb: 0 };
+      let search = '';
+      let showHidden = false;
+      let appsScoped = false;
+      let expectingRange = false;
 
       function bytes(n) {
         if (!Number.isFinite(n) || n <= 0) return '0 B';
@@ -666,6 +954,14 @@
         if (!name) return 'Unknown';
         const cleaned = name.replace(/\\/g, '/').split('/').pop();
         return cleaned || name;
+      }
+
+      function appKey(app) {
+        return app.id || app.name || 'unknown';
+      }
+
+      function appLabel(app) {
+        return settings.aliases[appKey(app)] || shortName(app.name);
       }
 
       function dayTotal(d) {
@@ -717,8 +1013,8 @@
           bar.className =
             'bar' + (index === days.length - 1 ? ' today' : '') + (total === 0 ? ' empty' : '');
           bar.style.height = `${Math.max(3, (total / max) * 100)}%`;
-          bar.addEventListener('mouseenter', () => showTooltip(bar, day));
-          bar.addEventListener('mouseleave', hideTooltip);
+          bar.addEventListener('mouseenter', () => showTooltip(bar, day, el('tooltip')));
+          bar.addEventListener('mouseleave', () => el('tooltip').classList.remove('visible'));
           chart.appendChild(bar);
         });
 
@@ -736,8 +1032,7 @@
           peak && dayTotal(peak) > 0 ? `peak ${bytes(dayTotal(peak))}` : '';
       }
 
-      function showTooltip(bar, day) {
-        const tip = el('tooltip');
+      function showTooltip(anchor, day, tip) {
         tip.textContent = '';
 
         const date = document.createElement('div');
@@ -760,8 +1055,8 @@
         tip.appendChild(total);
         tip.appendChild(split);
 
-        const wrap = bar.closest('.chart-wrap').getBoundingClientRect();
-        const rect = bar.getBoundingClientRect();
+        const wrap = tip.parentElement.getBoundingClientRect();
+        const rect = anchor.getBoundingClientRect();
         const tipRect = tip.getBoundingClientRect();
 
         let left = rect.left - wrap.left + rect.width / 2 - tipRect.width / 2;
@@ -773,51 +1068,78 @@
         tip.classList.add('visible');
       }
 
-      function hideTooltip() {
-        el('tooltip').classList.remove('visible');
-      }
-
       function renderApps(apps) {
         const container = el('apps');
         container.textContent = '';
 
         const merged = new Map();
         for (const app of apps) {
-          const name = shortName(app.name);
-          const prev = merged.get(name) || { rx: 0, tx: 0 };
-          merged.set(name, { rx: prev.rx + app.rx, tx: prev.tx + app.tx });
+          const key = appKey(app);
+          const prev = merged.get(key) || { key, name: app.name, id: app.id, rx: 0, tx: 0 };
+          prev.rx += app.rx;
+          prev.tx += app.tx;
+          merged.set(key, prev);
         }
 
-        const rows = [...merged.entries()]
-          .map(([name, v]) => ({ name, total: v.rx + v.tx }))
-          .sort((a, b) => b.total - a.total)
-          .slice(0, 7);
+        const hiddenCount = settings.ignored.filter((k) => merged.has(k)).length;
+        el('showHidden').textContent = showHidden ? `Hide hidden (${hiddenCount})` : `Hidden ${hiddenCount}`;
 
-        if (!rows.length) {
+        let rows = [...merged.values()].map((a) => ({
+          ...a,
+          label: appLabel(a),
+          total: a.rx + a.tx
+        }));
+
+        if (!showHidden) rows = rows.filter((r) => !settings.ignored.includes(r.key));
+        if (search) {
+          const q = search.toLowerCase();
+          rows = rows.filter((r) => r.label.toLowerCase().includes(q));
+        }
+
+        rows.sort((a, b) => b.total - a.total);
+        const visible = rows.slice(0, 40);
+
+        if (!visible.length) {
           const empty = document.createElement('div');
           empty.className = 'empty-state';
-          empty.textContent = 'No per-app data for this range.';
+          empty.textContent = search ? 'No app matches that filter.' : 'No per-app data for this range.';
           container.appendChild(empty);
           el('appsTotal').textContent = '';
           return;
         }
 
-        const max = Math.max(...rows.map((r) => r.total), 1);
-        const sum = rows.reduce((acc, r) => acc + r.total, 0);
+        const max = Math.max(...visible.map((r) => r.total), 1);
+        const sum = visible.reduce((acc, r) => acc + r.total, 0);
         el('appsTotal').textContent = bytes(sum);
 
-        for (const row of rows) {
+        for (const row of visible) {
           const wrap = document.createElement('div');
           wrap.className = 'app';
 
           const name = document.createElement('div');
           name.className = 'app-name';
-          name.textContent = row.name;
-          name.title = row.name;
+          name.textContent = row.label;
+          name.title = `${row.label} — double-click to rename`;
+          name.addEventListener('dblclick', (event) => {
+            event.stopPropagation();
+            startAliasEdit(name, row);
+          });
 
           const value = document.createElement('div');
           value.className = 'app-value';
           value.textContent = bytes(row.total);
+
+          const hide = document.createElement('button');
+          hide.className = 'app-hide';
+          hide.type = 'button';
+          hide.textContent = '×';
+          hide.title = 'Hide this app';
+          hide.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const ignored = new Set(settings.ignored);
+            ignored.add(row.key);
+            window.api.updateSettings({ ignored: [...ignored] });
+          });
 
           const bar = document.createElement('div');
           bar.className = 'app-bar';
@@ -827,9 +1149,210 @@
 
           wrap.appendChild(name);
           wrap.appendChild(value);
+          wrap.appendChild(hide);
           wrap.appendChild(bar);
+
+          wrap.addEventListener('click', () => openAppDetail(row));
+
           container.appendChild(wrap);
         }
+      }
+
+      function startAliasEdit(nameEl, row) {
+        const input = document.createElement('input');
+        input.value = row.label;
+        nameEl.textContent = '';
+        nameEl.appendChild(input);
+        input.focus();
+        input.select();
+
+        const commit = () => {
+          const value = input.value.trim();
+          const aliases = { ...settings.aliases };
+          if (value && value !== shortName(row.name)) aliases[row.key] = value;
+          else delete aliases[row.key];
+          window.api.updateSettings({ aliases });
+          nameEl.textContent = value || shortName(row.name);
+        };
+
+        input.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') commit();
+          if (event.key === 'Escape') nameEl.textContent = row.label;
+        });
+        input.addEventListener('blur', commit);
+      }
+
+      async function openAppDetail(row) {
+        el('modal').hidden = false;
+        el('modalTitle').textContent = row.label;
+
+        const visible = slice();
+        const start = visible[0].date + 'T00:00:00';
+        el('modalBody').textContent = `Loading ${visible.length} days…`;
+
+        const days = await window.api.appDays({
+          appId: row.id,
+          start,
+          end: new Date().toISOString()
+        });
+
+        if (!days || !days.length) {
+          el('modalBody').textContent = 'No daily history for this app.';
+          return;
+        }
+
+        const wrap = document.createElement('div');
+        wrap.className = 'chart-wrap';
+        const chart = document.createElement('div');
+        chart.className = 'chart';
+        const tip = document.createElement('div');
+        tip.className = 'tooltip';
+
+        const max = Math.max(...days.map(dayTotal), 1);
+        for (const day of days) {
+          const bar = document.createElement('div');
+          bar.className = 'bar' + (dayTotal(day) === 0 ? ' empty' : '');
+          bar.style.height = `${Math.max(2, (dayTotal(day) / max) * 100)}%`;
+          bar.addEventListener('mouseenter', () => showTooltip(bar, day, tip));
+          bar.addEventListener('mouseleave', () => tip.classList.remove('visible'));
+          chart.appendChild(bar);
+        }
+
+        wrap.appendChild(chart);
+        wrap.appendChild(tip);
+
+        const axis = document.createElement('div');
+        axis.className = 'axis';
+        axis.innerHTML = `<span>${days[0].date.slice(5)}</span><span>${days[days.length - 1].date.slice(5)}</span>`;
+
+        el('modalBody').textContent = '';
+        el('modalBody').appendChild(wrap);
+        el('modalBody').appendChild(axis);
+      }
+
+      function renderHeatmap() {
+        const wrap = el('heatmap');
+        wrap.textContent = '';
+
+        const hoursAll = data.hoursAll || [];
+        if (!hoursAll.length) {
+          wrap.textContent = 'No hourly data.';
+          return;
+        }
+
+        const start = new Date(data.hoursFrom);
+        const grid = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
+
+        hoursAll.forEach((bucket, index) => {
+          const t = new Date(start.getTime() + index * 3600 * 1000);
+          const weekday = (t.getDay() + 6) % 7;
+          grid[weekday][t.getHours()] += bucket.rx + bucket.tx;
+        });
+
+        const max = Math.max(...grid.flat(), 1);
+        const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+        const corner = document.createElement('div');
+        wrap.appendChild(corner);
+        for (let h = 0; h < 24; h++) {
+          const label = document.createElement('div');
+          label.className = 'heat-hour';
+          label.textContent = h % 6 === 0 ? String(h).padStart(2, '0') : '';
+          wrap.appendChild(label);
+        }
+
+        grid.forEach((row, weekday) => {
+          const day = document.createElement('div');
+          day.className = 'heat-day';
+          day.textContent = dayNames[weekday];
+          wrap.appendChild(day);
+
+          row.forEach((value, hour) => {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            const intensity = value / max;
+            cell.style.background = value
+              ? `rgba(91, 140, 255, ${0.08 + 0.82 * Math.pow(intensity, 0.6)})`
+              : 'var(--track)';
+            cell.addEventListener('mouseenter', (event) => {
+              const tip = el('heatTip');
+              tip.textContent = '';
+              const head = document.createElement('div');
+              head.className = 't-date';
+              head.textContent = `${dayNames[weekday]} ${String(hour).padStart(2, '0')}:00–${String(
+                (hour + 1) % 24
+              ).padStart(2, '0')}:00`;
+              const total = document.createElement('div');
+              total.className = 't-total';
+              total.textContent = bytes(value);
+              tip.appendChild(head);
+              tip.appendChild(total);
+              tip.classList.add('visible');
+
+              const card = wrap.parentElement.getBoundingClientRect();
+              const rect = event.target.getBoundingClientRect();
+              tip.style.left = `${Math.min(
+                Math.max(4, rect.left - card.left - 40),
+                card.width - 160
+              )}px`;
+              tip.style.top = `${rect.top - card.top - 46}px`;
+            });
+            cell.addEventListener('mouseleave', () => el('heatTip').classList.remove('visible'));
+            wrap.appendChild(cell);
+          });
+        });
+
+        let best = { value: 0, weekday: 0, hour: 0 };
+        grid.forEach((row, weekday) =>
+          row.forEach((value, hour) => {
+            if (value > best.value) best = { value, weekday, hour };
+          })
+        );
+        el('heatPeak').textContent =
+          best.value > 0
+            ? `busiest ${dayNames[best.weekday]} ${String(best.hour).padStart(2, '0')}:00`
+            : '';
+      }
+
+      function renderForecast(days, includesToday) {
+        if (!includesToday) {
+          el('forecast').textContent = '';
+          return;
+        }
+        const total = days.reduce((acc, d) => acc + dayTotal(d), 0);
+        const perDay = total / Math.max(1, days.length);
+        const now = new Date();
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const projected = perDay * monthEnd.getDate();
+        el('forecast').textContent = `At this rate: ${bytes(projected)} by ${monthEnd.toLocaleDateString(
+          [],
+          { day: 'numeric', month: 'short' }
+        )}`;
+      }
+
+      function renderCap(days) {
+        const capGb = Number(settings.capGb) || 0;
+        const wrap = el('cap');
+        wrap.hidden = false;
+
+        if (!capGb) {
+          el('capBar').hidden = true;
+          el('capText').textContent = 'No monthly cap set';
+          el('capEdit').textContent = 'Set cap';
+          return;
+        }
+
+        el('capBar').hidden = false;
+        el('capEdit').textContent = 'Edit cap';
+
+        const monthKey = new Date().toISOString().slice(0, 7);
+        const used = days
+          .filter((d) => d.date.startsWith(monthKey))
+          .reduce((acc, d) => acc + dayTotal(d), 0);
+        const pct = Math.min(100, (used / (capGb * 1e9)) * 100);
+
+        el('capFill').style.width = `${pct}%`;
+        el('capText').textContent = `${bytes(used)} of ${capGb} GB this month (${pct.toFixed(0)}%)`;
       }
 
       function renderSummary(days) {
@@ -895,13 +1418,20 @@
         if (!days.length) return;
 
         el('rangeLabel').textContent = labelFor();
-        el('appsTitle').textContent = range === 'month' ? 'Apps in month' : 'Apps in range';
+        el('appsTitle').textContent = appsScoped
+          ? range === 'month'
+            ? 'Apps in month'
+            : 'Apps in range'
+          : 'Apps today';
 
         renderSummary(days);
         renderChart(days);
 
         const includesToday = days[days.length - 1].date === data.days[data.days.length - 1].date;
         renderPeak(data.hours, includesToday);
+        renderForecast(days, includesToday);
+        renderCap(days);
+        renderApps(data.apps || []);
       }
 
       function populateMonths() {
@@ -924,6 +1454,7 @@
           window.api.requestUsage({});
           return;
         }
+        expectingRange = true;
         const { appsStart, appsEnd } = rangeStartEnd(days);
         window.api.requestUsage({ appsStart, appsEnd });
       }
@@ -940,12 +1471,18 @@
         const isFirst = !data;
         data = next;
 
+        if (expectingRange) {
+          expectingRange = false;
+          appsScoped = true;
+        }
+
         el('meta').textContent = `${next.profile || 'connection'} · updated ${new Date(
           next.generatedAt
         ).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
         if (isFirst) {
           populateMonths();
+          renderHeatmap();
           const ranges = el('ranges');
           ranges.addEventListener('click', (event) => {
             const button = event.target.closest('button[data-range]');
@@ -965,15 +1502,83 @@
             render();
           });
 
+          el('appSearch').addEventListener('input', (event) => {
+            search = event.target.value.trim();
+            renderApps(data.apps || []);
+          });
+
+          el('showHidden').addEventListener('click', () => {
+            showHidden = !showHidden;
+            renderApps(data.apps || []);
+          });
+
+          el('capEdit').addEventListener('click', () => {
+            const input = el('capInput');
+            input.hidden = false;
+            input.value = String(Number(settings.capGb) || '');
+            input.focus();
+            input.select();
+          });
+
+          el('capInput').addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+              el('capInput').hidden = true;
+              return;
+            }
+            if (event.key !== 'Enter') return;
+            const parsed = Number(el('capInput').value);
+            el('capInput').hidden = true;
+            if (Number.isFinite(parsed) && parsed >= 0) {
+              window.api.updateSettings({ capGb: parsed });
+            }
+          });
+
+          el('capInput').addEventListener('blur', () => {
+            el('capInput').hidden = true;
+          });
+
+          el('modalClose').addEventListener('click', () => {
+            el('modal').hidden = true;
+          });
+          el('modal').addEventListener('click', (event) => {
+            if (event.target === el('modal')) el('modal').hidden = true;
+          });
+          document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') el('modal').hidden = true;
+          });
+
           requestForRange();
         }
 
-        renderApps(next.apps || []);
         render();
       }
 
       window.api.onSample(renderLive);
       window.api.onUsage(renderUsage);
+
+      const connDot = el('connDot');
+
+      function paintConnectivity() {
+        const online = navigator.onLine;
+        connDot.classList.toggle('off', !online);
+        connDot.title = online ? 'Connected' : 'No internet connection';
+        connDot.setAttribute('aria-label', connDot.title);
+      }
+
+      window.addEventListener('online', paintConnectivity);
+      window.addEventListener('offline', paintConnectivity);
+      paintConnectivity();
+
+      window.api.getSettings().then((value) => {
+        if (value) settings = { ...settings, ...value };
+        if (data) render();
+      });
+
+      window.api.onSettings((value) => {
+        settings = { ...settings, ...value };
+        if (data) render();
+      });
+
       window.api.requestUsage({});
 
       const themeQuery = window.matchMedia('(prefers-color-scheme: dark)');
