@@ -68,6 +68,18 @@ for ($i = 0; $i -lt $hourUsage.Count; $i++) {
     }
 }
 
+# Hourly buckets across the whole window, for the weekday-by-hour heatmap.
+$op = $profile.GetNetworkUsageAsync($windowStart, $now, [Windows.Networking.Connectivity.DataUsageGranularity]::PerHour, $states)
+$hourAll = Await $op $usageType
+
+$hoursAll = @()
+for ($i = 0; $i -lt $hourAll.Count; $i++) {
+    $hoursAll += [pscustomobject]@{
+        rx = [double]$hourAll[$i].BytesReceived
+        tx = [double]$hourAll[$i].BytesSent
+    }
+}
+
 # Per-app totals for the requested window (defaults to today).
 $attrStart = $todayStart
 $attrEnd = $now
@@ -125,5 +137,7 @@ foreach ($a in $attributed) {
     generatedAt = $now.ToString('o')
     days        = $days
     hours       = $hours
+    hoursFrom   = $windowStart.ToString('o')
+    hoursAll    = $hoursAll
     apps        = $apps
 } | ConvertTo-Json -Depth 5 -Compress
