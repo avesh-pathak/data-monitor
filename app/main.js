@@ -1,10 +1,10 @@
 const path = require('path');
 const fs = require('fs');
-const { app, BrowserWindow, Tray, Menu, nativeImage, screen, ipcMain, nativeTheme } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, screen, ipcMain, nativeTheme, globalShortcut } = require('electron');
 
 const { getTaskbarGeometry, shouldHideForFullscreen } = require('./taskbar');
 const { startSampler } = require('./sampler');
-const { formatRate } = require('./format');
+const { formatRate, formatBytes } = require('./format');
 const { readUsage } = require('./usage');
 
 const WIDGET_WIDTH = 210;
@@ -15,6 +15,7 @@ const POPOVER_WIDTH = 320;
 const POPOVER_HEIGHT = 196;
 
 const THEMES = ['system', 'dark', 'light'];
+const WIDGET_MODES = ['speed', 'today'];
 
 let win = null;
 let dashboard = null;
@@ -23,10 +24,22 @@ let popoverToken = 0;
 let tray = null;
 let sampler = null;
 let paused = false;
-let latest = { down: { text: '0.0', unit: 'Kbps' }, up: { text: '0.0', unit: 'Kbps' } };
+let latestRate = { down: { text: '0.0', unit: 'Kbps' }, up: { text: '0.0', unit: 'Kbps' }, mbps: 0 };
+let todayBytes = 0;
+let recentMbps = [];
 let repositionTimer = null;
 let lastRaise = 0;
-let settings = { theme: 'system' };
+let settings = {
+  theme: 'system',
+  widgetMode: 'speed',
+  compact: false,
+  thresholds: false,
+  capGb: 0,
+  aliases: {},
+  ignored: []
+};
+
+const appDaysCache = new Map();
 
 app.setAppUserModelId('local.taskbar-data-monitor');
 
@@ -40,11 +53,18 @@ function settingsPath() {
 
 function loadSettings() {
   try {
-    const raw = fs.readFileSync(settingsPath(), 'utf8');
-    const parsed = JSON.parse(raw);
-    if (parsed && THEMES.includes(parsed.theme)) settings.theme = parsed.theme;
+    const parsed = JSON.parse(fs.readFileSync(settingsPath(), 'utf8'));
+    if (parsed && typeof parsed === 'object') {
+      if (THEMES.includes(parsed.theme)) settings.theme = parsed.theme;
+      if (WIDGET_MODES.includes(parsed.widgetMode)) settings.widgetMode = parsed.widgetMode;
+      if (typeof parsed.compact === 'boolean') settings.compact = parsed.compact;
+      if (typeof parsed.thresholds === 'boolean') settings.thresholds = parsed.thresholds;
+      if (Number.isFinite(parsed.capGb)) settings.capGb = parsed.capGb;
+      if (parsed.aliases && typeof parsed.aliases === 'object') settings.aliases = parsed.aliases;
+      if (Array.isArray(parsed.ignored)) settings.ignored = parsed.ignored;
+    }
   } catch (_) {
-    /* first run, or unreadable: keep defaults */
+    /* first run */
   }
 }
 
@@ -52,9 +72,14 @@ function saveSettings() {
   try {
     fs.mkdirSync(path.dirname(settingsPath()), { recursive: true });
     fs.writeFileSync(settingsPath(), JSON.stringify(settings, null, 2));
-    console.log('[settings] saved', settings.theme, 'to', settingsPath());
   } catch (err) {
     console.error('[settings] save failed:', err.message);
+  }
+}
+
+function broadcastSettings() {
+  for (const target of [win, dashboard]) {
+    if (target && !target.isDestroyed()) target.webContents.send('settings', settings);
   }
 }
 
@@ -68,6 +93,7 @@ function applyTheme(theme, persist = true) {
 
   if (persist) saveSettings();
   refreshTrayMenu();
+  broadcastSettings();
 }
 
 function createWidget() {
@@ -95,14 +121,14 @@ function createWidget() {
     }
   });
 
-  // screen-saver level sits above the taskbar itself.
   win.setAlwaysOnTop(true, 'screen-saver');
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: false });
 
   win.loadFile(path.join(__dirname, 'widget.html'));
   win.webContents.on('did-finish-load', () => {
-    win.webContents.send('sample', latest);
+    win.webContents.send('settings', settings);
     win.webContents.send('paused', paused);
+    pushWidget();
   });
 }
 
@@ -118,7 +144,7 @@ function createDashboard() {
 
   dashboard = new BrowserWindow({
     width: 980,
-    height: 700,
+    height: 760,
     minWidth: 560,
     minHeight: 600,
     show: false,
@@ -136,14 +162,13 @@ function createDashboard() {
 
   dashboard.loadFile(path.join(__dirname, 'dashboard.html'));
   dashboard.once('ready-to-show', () => {
-    // The widget is a no-activate window, so the app never owns the foreground when
-    // the click arrives. Without this, the dashboard opens behind the user's window.
     if (process.platform === 'win32') app.focus({ steal: true });
     dashboard.show();
     dashboard.focus();
     dashboard.moveTop();
 
     if (process.env.DASH_SNAPSHOT) {
+      const snapshotDelay = Number(process.env.DASH_SNAPSHOT_DELAY || 4000);
       setTimeout(async () => {
         try {
           if (process.env.DASH_TEST_TOGGLE === '1') {
@@ -152,8 +177,18 @@ function createDashboard() {
             );
             await new Promise((resolve) => setTimeout(resolve, 1200));
           }
+          if (process.env.DASH_TEST_DRILL === '1') {
+            await dashboard.webContents.executeJavaScript(
+              "document.querySelector('#apps .app')?.click()"
+            );
+            await new Promise((resolve) => setTimeout(resolve, 22000));
+          }
           const image = await dashboard.capturePage();
           require('fs').writeFileSync(process.env.DASH_SNAPSHOT, image.toPNG());
+          const metrics = await dashboard.webContents.executeJavaScript(
+            'JSON.stringify({ scrollHeight: document.body.scrollHeight, innerHeight: window.innerHeight, scrollWidth: document.body.scrollWidth, innerWidth: window.innerWidth })'
+          );
+          console.log('layout metrics:', metrics);
           console.log('dashboard snapshot written');
         } catch (err) {
           console.error('dashboard snapshot failed:', err.message);
@@ -185,16 +220,12 @@ function positionWidget() {
   const scale = display.scaleFactor;
   const screenHeightPx = display.bounds.height * scale;
 
-  // Auto-hidden bar: it keeps its height but slides down, leaving a sliver.
-  // The readout lives *in* the taskbar, so it goes away with the bar rather than
-  // floating over whatever window is underneath.
   const barHidden = geo.top > screenHeightPx - 20;
   if (barHidden) {
     if (win.isVisible()) win.hide();
     return;
   }
 
-  // Fullscreen apps suppress the bar without moving it, so geometry alone is not enough.
   if (shouldHideForFullscreen()) {
     if (win.isVisible()) win.hide();
     return;
@@ -204,10 +235,6 @@ function positionWidget() {
   const heightPx = Math.round(WIDGET_HEIGHT * scale);
   const notifyLeft = geo.notifyLeft !== null ? geo.notifyLeft : geo.right - Math.round(120 * scale);
 
-  // Prefer the empty band to the left of a centred Start button: the icon row is drawn
-  // by XAML and its real extent is not measurable, so sitting left of the clock overlaps
-  // icons as soon as enough apps are open. Fall back to the clock side when there is no
-  // Start anchor or no room.
   let xPx = null;
   if (geo.startLeft !== null) {
     xPx = Math.round(geo.startLeft - widthPx - 18 * scale);
@@ -227,8 +254,6 @@ function positionWidget() {
 
   if (!win.isVisible()) win.showInactive();
 
-  // The taskbar is itself topmost and re-raises after notifications, tray changes and
-  // clock ticks, which puts it above us. Re-assert our place in the topmost band.
   const now = Date.now();
   if (now - lastRaise > 500) {
     win.moveTop();
@@ -240,6 +265,36 @@ function buildTrayMenu() {
   return Menu.buildFromTemplate([
     { label: 'Open dashboard', click: () => createDashboard() },
     { type: 'separator' },
+    {
+      label: 'Readout',
+      submenu: [
+        {
+          label: 'Live speed',
+          type: 'radio',
+          checked: settings.widgetMode === 'speed',
+          click: () => updateSettings({ widgetMode: 'speed' })
+        },
+        {
+          label: "Today's total",
+          type: 'radio',
+          checked: settings.widgetMode === 'today',
+          click: () => updateSettings({ widgetMode: 'today' })
+        },
+        { type: 'separator' },
+        {
+          label: 'Compact (no units)',
+          type: 'checkbox',
+          checked: settings.compact,
+          click: (item) => updateSettings({ compact: item.checked })
+        },
+        {
+          label: 'Colour by speed',
+          type: 'checkbox',
+          checked: settings.thresholds,
+          click: (item) => updateSettings({ thresholds: item.checked })
+        }
+      ]
+    },
     {
       label: 'Theme',
       submenu: [
@@ -296,26 +351,133 @@ function createTray() {
   refreshTrayMenu();
 }
 
+function sparkline(values) {
+  const glyphs = ' ▁▂▃▄▅▆▇█';
+  const max = Math.max(...values, 0.0001);
+  return values
+    .map((v) => glyphs[Math.min(glyphs.length - 1, Math.max(0, Math.round((v / max) * (glyphs.length - 1))))])
+    .join('');
+}
+
+function pushWidget() {
+  if (!win || win.isDestroyed()) return;
+
+  let payload;
+  if (settings.widgetMode === 'today') {
+    const total = formatBytes(todayBytes);
+    payload = { kind: 'total', text: total.text, unit: total.unit, compact: settings.compact };
+  } else {
+    payload = {
+      kind: 'speed',
+      down: latestRate.down,
+      up: latestRate.up,
+      compact: settings.compact,
+      thresholds: settings.thresholds,
+      mbps: latestRate.mbps
+    };
+  }
+
+  win.webContents.send('widget', payload);
+}
+
 function onRate(rate) {
-  latest = {
+  latestRate = {
     down: formatRate(rate.down),
-    up: formatRate(rate.up)
+    up: formatRate(rate.up),
+    mbps: (rate.down + rate.up) * 8 / 1e6
   };
 
   if (paused) return;
 
-  for (const target of [win, dashboard]) {
-    if (target && !target.isDestroyed()) target.webContents.send('sample', latest);
+  recentMbps.push(latestRate.mbps);
+  if (recentMbps.length > 60) recentMbps.shift();
+
+  for (const target of [dashboard]) {
+    if (target && !target.isDestroyed()) {
+      target.webContents.send('sample', { down: latestRate.down, up: latestRate.up });
+    }
   }
 
+  pushWidget();
+
   if (tray) {
-    tray.setToolTip(`↓ ${latest.down.text} ${latest.down.unit}   ↑ ${latest.up.text} ${latest.up.unit}`);
+    const tail = recentMbps.slice(-40);
+    tray.setToolTip(
+      `↓ ${latestRate.down.text} ${latestRate.down.unit}   ↑ ${latestRate.up.text} ${latestRate.up.unit}\n${sparkline(tail)}`
+    );
+  }
+}
+
+async function refreshToday() {
+  const data = await readUsage({});
+  if (data && data.days && data.days.length) {
+    const today = data.days[data.days.length - 1];
+    todayBytes = today.rx + today.tx;
+    pushWidget();
   }
 }
 
 function logError(message) {
   if (message) console.error('[sampler]', message);
 }
+
+function updateSettings(patch) {
+  if (!patch || typeof patch !== 'object') return settings;
+
+  settings = { ...settings, ...patch };
+  if (patch.theme) nativeTheme.themeSource = THEMES.includes(patch.theme) ? patch.theme : 'system';
+  saveSettings();
+
+  const background = nativeTheme.shouldUseDarkColors ? '#0b0b0f' : '#f5f6f8';
+  if (dashboard && !dashboard.isDestroyed()) dashboard.setBackgroundColor(background);
+
+  refreshTrayMenu();
+  broadcastSettings();
+  pushWidget();
+
+  if (settings.widgetMode === 'today') refreshToday();
+
+  return settings;
+}
+
+ipcMain.handle('get-settings', () => settings);
+ipcMain.handle('update-settings', (_event, patch) => updateSettings(patch));
+
+ipcMain.handle('app-days', (_event, payload) => {
+  return new Promise((resolve) => {
+    const { appId, start, end } = payload || {};
+    if (!appId || !start || !end) return resolve(null);
+
+    const key = `${appId}|${start}|${end.slice(0, 10)}`;
+    const hit = appDaysCache.get(key);
+    if (hit && Date.now() - hit.at < 5 * 60 * 1000) return resolve(hit.days);
+
+    const { spawn } = require('child_process');
+    const ps = spawn(
+      'powershell.exe',
+      [
+        '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+        '-File', path.join(__dirname, 'appdays.ps1'),
+        '-AppId', appId, '-Start', start, '-End', end
+      ],
+      { windowsHide: true }
+    );
+
+    let out = '';
+    ps.stdout.on('data', (c) => (out += c.toString()));
+    ps.on('close', () => {
+      try {
+        const parsed = JSON.parse(out.replace(/^\uFEFF/, '').trim());
+        const days = parsed && parsed.days ? parsed.days : null;
+        if (days) appDaysCache.set(key, { at: Date.now(), days });
+        resolve(days);
+      } catch (_) {
+        resolve(null);
+      }
+    });
+    ps.on('error', () => resolve(null));
+  });
+});
 
 ipcMain.on('open-dashboard', () => createDashboard());
 
@@ -324,6 +486,47 @@ ipcMain.on('request-usage', async (event, options) => {
   if (!event.sender.isDestroyed()) {
     event.sender.send('usage', data);
   }
+});
+
+ipcMain.on('widget-context', () => {
+  if (!win || win.isDestroyed()) return;
+  const menu = Menu.buildFromTemplate([
+    {
+      label: 'Readout',
+      submenu: [
+        {
+          label: 'Live speed',
+          type: 'radio',
+          checked: settings.widgetMode === 'speed',
+          click: () => updateSettings({ widgetMode: 'speed' })
+        },
+        {
+          label: "Today's total",
+          type: 'radio',
+          checked: settings.widgetMode === 'today',
+          click: () => updateSettings({ widgetMode: 'today' })
+        },
+        { type: 'separator' },
+        {
+          label: 'Compact (no units)',
+          type: 'checkbox',
+          checked: settings.compact,
+          click: (item) => updateSettings({ compact: item.checked })
+        },
+        {
+          label: 'Colour by speed',
+          type: 'checkbox',
+          checked: settings.thresholds,
+          click: (item) => updateSettings({ thresholds: item.checked })
+        }
+      ]
+    },
+    { type: 'separator' },
+    { label: 'Open dashboard', click: () => createDashboard() },
+    { type: 'separator' },
+    { label: 'Quit', click: () => app.quit() }
+  ]);
+  menu.popup({ window: win });
 });
 
 function ensurePopover() {
@@ -405,6 +608,13 @@ app.whenReady().then(() => {
   sampler = startSampler(onRate, logError);
   positionWidget();
   repositionTimer = setInterval(positionWidget, REPOSITION_MS);
+
+  refreshToday();
+  setInterval(() => {
+    if (settings.widgetMode === 'today') refreshToday();
+  }, 60000);
+
+  globalShortcut.register('Control+Alt+D', () => createDashboard());
 });
 
 app.on('window-all-closed', () => {
@@ -414,4 +624,5 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   if (repositionTimer) clearInterval(repositionTimer);
   if (sampler) sampler.stop();
+  globalShortcut.unregisterAll();
 });

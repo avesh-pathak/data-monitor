@@ -9,5 +9,11 @@ contextBridge.exposeInMainWorld('api', {
   hoverStart: () => ipcRenderer.send('widget-hover-start'),
   hoverEnd: () => ipcRenderer.send('widget-hover-end'),
   setTheme: (theme) => ipcRenderer.send('set-theme', theme),
-  onPopover: (callback) => ipcRenderer.on('popover-data', (_event, data) => callback(data))
+  onPopover: (callback) => ipcRenderer.on('popover-data', (_event, data) => callback(data)),
+  onWidget: (callback) => ipcRenderer.on('widget', (_event, data) => callback(data)),
+  widgetContext: () => ipcRenderer.send('widget-context'),
+  getSettings: () => ipcRenderer.invoke('get-settings'),
+  updateSettings: (patch) => ipcRenderer.invoke('update-settings', patch),
+  onSettings: (callback) => ipcRenderer.on('settings', (_event, data) => callback(data)),
+  appDays: (payload) => ipcRenderer.invoke('app-days', payload)
 });
