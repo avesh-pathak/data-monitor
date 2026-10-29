@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        color-scheme: dark;
+        --pop-bg: rgba(20, 20, 25, 0.97);
+        --pop-line: rgba(255, 255, 255, 0.09);
+        --pop-text: #f2f2f5;
+        --pop-muted: #8e8e99;
+        --pop-dim: #5c5c66;
+        --pop-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+        --pop-down: #7cc4ff;
+        --pop-up: #7fd6a4;
+      }
+
+      @media (prefers-color-scheme: light) {
+        :root {
+          color-scheme: light;
+          --pop-bg: rgba(255, 255, 255, 0.98);
+          --pop-line: rgba(15, 15, 25, 0.1);
+          --pop-text: #14141a;
+          --pop-muted: #62626e;
+          --pop-dim: #8d8d99;
+          --pop-shadow: 0 18px 44px rgba(20, 30, 60, 0.18);
+          --pop-down: #1f6feb;
+          --pop-up: #148f5b;
+        }
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+        -webkit-user-select: none;
+      }
+
+      .card {
+        width: 100%;
+        height: 100%;
+        background: var(--pop-bg);
+        border: 1px solid var(--pop-line);
+        border-radius: 14px;
+        padding: 14px 16px;
+        color: var(--pop-text);
+        font-family: 'Segoe UI Variable Text', 'Segoe UI', sans-serif;
+        box-shadow: var(--pop-shadow);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .label {
+        font-size: 10px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: var(--pop-muted);
+      }
+
+      .total {
+        font-family: 'Segoe UI Variable Display', 'Segoe UI', sans-serif;
+        font-size: 27px;
+        font-weight: 650;
+        letter-spacing: -0.9px;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .split {
+        font-size: 11px;
+        color: var(--pop-muted);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .apps {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 2px;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        font-size: 12px;
+      }
+
+      .app-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .app-value {
+        color: var(--pop-muted);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .hint {
+        margin-top: auto;
+        font-size: 10px;
+        color: var(--pop-dim);
+      }
+
+      .empty {
+        font-size: 12px;
+        color: var(--pop-muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="label">Today</div>
+      <div class="total" id="total">—</div>
+      <div class="split" id="split">—</div>
+      <div class="apps" id="apps"></div>
+      <div class="hint">Click the readout for the full dashboard</div>
+    </div>
+
+    <script>
+      function bytes(n) {
+        if (!Number.isFinite(n) || n <= 0) return '0 B';
+        if (n >= 1e9) return (n / 1e9).toFixed(2) + ' GB';
+        if (n >= 1e6) return (n / 1e6).toFixed(1) + ' MB';
+        if (n >= 1e3) return (n / 1e3).toFixed(0) + ' KB';
+        return Math.round(n) + ' B';
+      }
+
+      function shortName(name) {
+        if (!name) return 'Unknown';
+        const cleaned = name.replace(/\\/g, '/').split('/').pop();
+        return cleaned || name;
+      }
+
+      window.api.onPopover((data) => {
+        const apps = document.getElementById('apps');
+        apps.textContent = '';
+
+        if (!data || !data.days || !data.days.length) {
+          document.getElementById('total').textContent = 'Unavailable';
+          document.getElementById('split').textContent = 'Windows usage API returned nothing';
+          return;
+        }
+
+        const today = data.days[data.days.length - 1];
+        document.getElementById('total').textContent = bytes(today.rx + today.tx);
+        document.getElementById('split').textContent = `${bytes(today.rx)} down · ${bytes(
+          today.tx
+        )} up`;
+
+        const merged = new Map();
+        for (const app of data.apps || []) {
+          const name = shortName(app.name);
+          const prev = merged.get(name) || { rx: 0, tx: 0 };
+          merged.set(name, { rx: prev.rx + app.rx, tx: prev.tx + app.tx });
+        }
+
+        const rows = [...merged.entries()]
+          .map(([name, v]) => ({ name, total: v.rx + v.tx }))
+          .sort((a, b) => b.total - a.total)
+          .slice(0, 3);
+
+        if (!rows.length) {
+          const empty = document.createElement('div');
+          empty.className = 'empty';
+          empty.textContent = 'No per-app data yet today';
+          apps.appendChild(empty);
+          return;
+        }
+
+        for (const row of rows) {
+          const wrap = document.createElement('div');
+          wrap.className = 'app';
+
+          const name = document.createElement('div');
+          name.className = 'app-name';
+          name.textContent = row.name;
+
+          const value = document.createElement('div');
+          value.className = 'app-value';
+          value.textContent = bytes(row.total);
+
+          wrap.appendChild(name);
+          wrap.appendChild(value);
+          apps.appendChild(wrap);
+        }
+      });
+    </script>
+  </body>
+</html>
