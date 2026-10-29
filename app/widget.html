@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
+    />
+    <style>
+      :root {
+        --text: rgba(255, 255, 255, 0.94);
+        --unit: rgba(255, 255, 255, 0.58);
+        --arrow: rgba(255, 255, 255, 0.72);
+        --down: #7cc4ff;
+        --up: #7fd6a4;
+      }
+
+      @media (prefers-color-scheme: light) {
+        :root {
+          --text: rgba(10, 10, 14, 0.9);
+          --unit: rgba(10, 10, 14, 0.55);
+          --arrow: rgba(10, 10, 14, 0.6);
+          --down: #1f6feb;
+          --up: #148f5b;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+        -webkit-user-select: none;
+        cursor: default;
+      }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding-right: 4px;
+        cursor: pointer;
+      }
+
+      .readout {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+        font-family: 'Segoe UI Variable Text', 'Segoe UI', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        transition: opacity 200ms ease;
+      }
+
+      .readout.idle {
+        opacity: 0.55;
+      }
+
+      .readout:hover {
+        filter: brightness(1.25);
+      }
+
+      .readout:active {
+        filter: brightness(1.4);
+      }
+
+      .readout[hidden],
+      .paused[hidden] {
+        display: none;
+      }
+
+      .num {
+        min-width: 30px;
+        text-align: right;
+        letter-spacing: 0.1px;
+      }
+
+      .unit {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--unit);
+        min-width: 30px;
+        margin-right: 8px;
+      }
+
+      .arrow {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--arrow);
+      }
+
+      .arrow.down {
+        color: var(--down);
+      }
+
+      .arrow.up {
+        color: var(--up);
+      }
+
+      .paused {
+        font-family: 'Segoe UI Variable Text', 'Segoe UI', sans-serif;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--unit);
+        letter-spacing: 0.3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="readout" id="readout">
+      <span class="arrow down">↓</span>
+      <span class="num" id="down">0.0</span>
+      <span class="unit" id="downUnit">Kbps</span>
+      <span class="arrow up">↑</span>
+      <span class="num" id="up">0.0</span>
+      <span class="unit" id="upUnit">Kbps</span>
+    </div>
+    <span class="paused" id="pausedLabel" hidden>paused</span>
+
+    <script>
+      const readout = document.getElementById('readout');
+      const pausedLabel = document.getElementById('pausedLabel');
+      const downEl = document.getElementById('down');
+      const downUnitEl = document.getElementById('downUnit');
+      const upEl = document.getElementById('up');
+      const upUnitEl = document.getElementById('upUnit');
+
+      let paused = false;
+
+      window.api.onSample(({ down, up }) => {
+        if (paused) return;
+        downEl.textContent = down.text;
+        downUnitEl.textContent = down.unit;
+        upEl.textContent = up.text;
+        upUnitEl.textContent = up.unit;
+
+        const idle = down.text === '0.0' && up.text === '0.0';
+        readout.classList.toggle('idle', idle);
+      });
+
+      window.api.onPaused((value) => {
+        paused = value;
+        readout.hidden = value;
+        pausedLabel.hidden = !value;
+      });
+
+      document.body.addEventListener('click', () => {
+        window.api.openDashboard();
+      });
+
+      document.body.addEventListener('mouseenter', () => {
+        window.api.hoverStart();
+      });
+
+      document.body.addEventListener('mouseleave', () => {
+        window.api.hoverEnd();
+      });
+    </script>
+  </body>
+</html>
